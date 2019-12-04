@@ -12,15 +12,72 @@
 //constants
 const int GAUSSIAN_BLUR_SIZE = 7;
 const double GAUSSIAN_BLUR_SIGMA = 2;
-const double CANNY_EDGE_TH = 150;
+const double CANNY_EDGE_TH = 150; // 150
 const double HOUGH_ACCUM_RESOLUTION = 2;
-const double MIN_CIRCLE_DIST = 40;
-const double HOUGH_ACCUM_TH = 70;
-const int MIN_RADIUS = 20;
-const int MAX_RADIUS = 100;
+const double MIN_CIRCLE_DIST = 40; // 40
+const double HOUGH_ACCUM_TH = 70; //70
+const int MIN_RADIUS = 20; // 20
+const int MAX_RADIUS = 100; // 100
+
+void tune_parameters(const char* filename)
+{
+    cv::Mat image = cv::imread( filename );
+    cv::Mat gray_image;
+    std::vector<cv::Vec3f> circles;
+    cv::Point center;
+    int radius;
+
+    //clear previous circles
+    circles.clear();
+
+    // If input image is RGB, convert it to gray
+    cv::cvtColor(image, gray_image, CV_BGR2GRAY);
+
+    //Reduce the noise so we avoid false circle detection
+    cv::GaussianBlur( gray_image, gray_image, cv::Size(GAUSSIAN_BLUR_SIZE, GAUSSIAN_BLUR_SIZE), GAUSSIAN_BLUR_SIGMA );
+
+
+    cv::imshow("Original Image", image);
+    cv::imshow("Blured Image", gray_image);
+
+    //Apply the Hough Transform to find the circles
+    cv::HoughCircles( gray_image, circles, CV_HOUGH_GRADIENT, HOUGH_ACCUM_RESOLUTION, MIN_CIRCLE_DIST, CANNY_EDGE_TH, HOUGH_ACCUM_TH, MIN_RADIUS, MAX_RADIUS );
+
+    //draw circles on the image
+    for(unsigned int ii = 0; ii < circles.size(); ii++ )
+    {
+        if ( circles[ii][0] != -1 )
+        {
+                center = cv::Point(cvRound(circles[ii][0]), cvRound(circles[ii][1]));
+                radius = cvRound(circles[ii][2]);
+                cv::circle(image, center, 5, cv::Scalar(0,0,255), -1, 8, 0 );// circle center in green
+                cv::circle(image, center, radius, cv::Scalar(0,0,255), 3, 8, 0 );// circle perimeter in red
+        }
+    }
+
+//********************************************************************
+
+    //show image
+    cv::imshow("Output Window", image);
+
+    cv::waitKey();
+}
 
 int main(int argc, char *argv[])
 {
+
+    std::string cmd(argv[0]);
+    if( cmd.find("tune_parameters") != cmd.npos )
+    {
+      if(argc<2)
+      {
+          std::cerr << "Missing input image file\n";
+          return -1;
+      }
+      tune_parameters(argv[1]);
+      return 0;
+    }
+
     cv::VideoCapture camera; //OpenCV video capture object
     cv::Mat image; //OpenCV image object
 	int cam_id; //camera id . Associated to device number in /dev/videoX
